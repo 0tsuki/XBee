@@ -1,12 +1,112 @@
 #include "Arduino.h"
 #include "XBee.h"
 
-XBeeAddress64::XBeeAddress64(uint32_t address)
+const unsigned char START_DELIMITER = 0x7E;
+const unsigned char LENGTH_MSB = 0x00;
+const unsigned char LENGTH_LSB = 0x11;
+const unsigned char FRAME_TYPE = 0x10;
+const unsigned char FRAME_ID = 0x00;
+const unsigned char RESERVED[2] = {0xFF, 0xFE};
+const unsigned char BROADCAST_REDIUS = 0x00;
+const unsigned char TRANSMIT_OPTION = 0x00;
+
+XBeeAddress::XBeeAddress()
 {
-    _address = address;
+    _isEmpty = true;
 }
 
-uint32_t XBeeAddress64::getAddress()
+XBeeAddress::XBeeAddress(unsigned char* addr)
+{
+    _address = addr;
+    _isEmpty = false;
+}
+
+bool XBeeAddress::isEmpty()
+{
+    return _isEmpty;
+}
+
+unsigned char* XBeeAddress::getAddress()
 {
     return _address;
 }
+
+unsigned char XBeeAddress::getAddress(int index)
+{
+    return _address[index];
+}
+
+Request::Request()
+{
+}
+
+void Request::setRfData(int size, unsigned char* rfData)
+{
+    _rfDataSize = size;
+    _rfData = rfData;
+}
+
+XBeeClient::XBeeClient()
+{
+    _apiMode = 2;
+}
+
+void XBeeClient::setSerial(int speed)
+{
+    Serial.begin(speed);
+}
+
+void XBeeClient::write(unsigned char data)
+{
+    if (_apiMode == 2) {
+        if (data == 0x7E || data == 0x7D || data == 0x11 || data == 0x13) {
+            Serial.write(0x7D);
+            data = data ^ 0x20;
+        }
+    }
+    Serial.write(data);
+}
+
+void XBeeClient::send(Request request, XBeeAddress address)
+{
+    Serial.write(START_DELIMITER);
+
+    write(LENGTH_MSB);
+    write(LENGTH_LSB);
+
+    write(FRAME_TYPE);
+    write(FRAME_ID);
+
+    // 64-bit DestinationAddress
+    for (int i = 0; i < 8; i++) {
+        write(address.getAddress(i));
+    }
+    for (int i = 0; i < 2; i++) {
+        write(RESERVED[i]);
+    }
+    write(BROADCAST_REDIUS);
+    write(TRANSMIT_OPTION);
+
+    for (int i = 0; i < request._rfDataSize; i++) {
+      write(request._rfData[i]);
+    }
+
+    unsigned char checksum = calcChecksum(request, address);
+    write(checksum);
+}
+
+unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
+{
+  unsigned char sum = FRAME_TYPE + FRAME_ID;
+  for (int i = 0; i < 8; i++) {
+    sum += address.getAddress(i);
+  }
+  sum += RESERVED[0] + RESERVED[1];
+  sum += BROADCAST_REDIUS;
+  sum += TRANSMIT_OPTION;
+  for (int i = 0; i < request._rfDataSize; i++) {
+      sum += request._rfData[i];
+  }
+  return 0xFF - sum;
+}
+

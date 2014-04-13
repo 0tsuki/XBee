@@ -1,37 +1,42 @@
-#ifndef XBeeClient_h
-#define XBeeClient_h
+#ifndef XBee_h
+#define XBee_h
 
 #include "Arduino.h"
+#include "HardwareSerial.h"
 
-class XBeeAddress64
+class XBeeAddress
 {
     public:
-        XBeeAddress64(uint32_t address);
-        uint32_t getAddress();
+        XBeeAddress();
+        XBeeAddress(unsigned char* address);
+        bool isEmpty();
+        unsigned char* getAddress();
+        unsigned char getAddress(int index);
     private:
-        uint32_t _address;
+        bool _isEmpty;
+        unsigned char* _address;
 };
 
-/*
+class Request
+{
+    public:
+        Request();
+        void setRfData(int size, unsigned char* rfData);
+        unsigned char calcChecksum();
+        unsigned char* _rfData;
+        int _rfDataSize;
+};
+
 class XBeeClient
 {
     public:
         XBeeClient();
-        void setApiMode(uint8_t apiMode = 2);
-        void send(ApiFrame request);
+        void setSerial(int speed);
+        void send(Request request, XBeeAddress address);
     private:
-        uint8_t _apiMode;
+        int _apiMode;
+        void write(unsigned char data);
+        unsigned char calcChecksum(Request request, XBeeAddress address);
 };
-
-class ApiFrame
-{
-    public:
-        ApiFrame();
-};
-
-class ZigBeeTransmitRequest : public ApiFrame
-{
-};
-*/
 
 #endif
