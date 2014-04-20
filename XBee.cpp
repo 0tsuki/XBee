@@ -46,6 +46,44 @@ void Request::setRfData(int size, unsigned char* rfData)
     _rfData = rfData;
 }
 
+Response::Response()
+{
+    _isEmpty = true;
+}
+
+void Response::setData(unsigned char* data)
+{
+    _isEmpty = false;
+
+    _startDelimiter = data[0];
+    _length[0] = data[1];
+    _length[1] = data[2];
+    _frameType = data[3];
+
+    unsigned char address64[8] = {
+        data[4], data[5], data[6], data[7],
+        data[8], data[9], data[10], data[11]
+    };
+    _address64 = XBeeAddress(address64);
+
+    _address16[0] = data[12];
+    _address16[1] = data[13];
+    _options = data[14];
+
+    int rfDataLength = _length[1] - 12;
+    unsigned char rfData[rfDataLength];
+    for (int i = 0; i < rfDataLength; i++) {
+        rfData[i] = data[15 + i];
+    }
+    _rfData = rfData;
+    _checksum = data[_length[1] + 3];
+}
+
+unsigned char* Response::getRfData()
+{
+    return _rfData;
+}
+
 XBeeClient::XBeeClient()
 {
     _apiMode = 2;
@@ -54,6 +92,11 @@ XBeeClient::XBeeClient()
 void XBeeClient::setSerial(int speed)
 {
     Serial.begin(speed);
+}
+
+int XBeeClient::available()
+{
+    return Serial.available();
 }
 
 void XBeeClient::write(unsigned char data)
@@ -93,6 +136,43 @@ void XBeeClient::send(Request request, XBeeAddress address)
 
     unsigned char checksum = calcChecksum(request, address);
     write(checksum);
+}
+
+Response XBeeClient::getResponse()
+{
+    Response response = Response();
+
+    unsigned char packet = Serial.read();
+    if (packet == START_DELIMITER) {
+        unsigned char lengthMsb = readPacket();
+        unsigned char lengthLsb = readPacket();
+
+        int responseLength = lengthLsb + 3;
+        unsigned char packets[responseLength];
+        packets[0] = START_DELIMITER;
+        packets[1] = lengthMsb;
+        packets[2] = lengthLsb;
+        for (int i = 3; i < responseLength; i++) {
+            packets[i] = readPacket();
+        }
+        response.setData(packets);
+    }
+
+    return response;
+}
+
+unsigned char XBeeClient::readPacket()
+{
+  unsigned char packet = Serial.read();
+
+  if (_apiMode == 2) {
+      if (packet == 0x7D) {
+          packet = Serial.read();
+          packet = packet ^ 0x20;
+      }
+  }
+
+  return packet;
 }
 
 unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
