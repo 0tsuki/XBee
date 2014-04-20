@@ -15,15 +15,27 @@ XBeeAddress::XBeeAddress()
     _isEmpty = true;
 }
 
-XBeeAddress::XBeeAddress(unsigned char* addr)
+XBeeAddress::XBeeAddress(unsigned char addr[8])
 {
-    _address = addr;
+    for (int i = 0; i < 8; i++) {
+        _address[i] = addr[i];
+    }
     _isEmpty = false;
 }
 
 bool XBeeAddress::isEmpty()
 {
     return _isEmpty;
+}
+
+bool XBeeAddress::equal(XBeeAddress address)
+{
+    for (int i = 0; i < 8; i++) {
+        if (_address[i] != address.getAddress(i)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 unsigned char* XBeeAddress::getAddress()

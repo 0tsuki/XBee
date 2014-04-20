@@ -8,13 +8,14 @@ class XBeeAddress
 {
     public:
         XBeeAddress();
-        XBeeAddress(unsigned char* address);
+        XBeeAddress(unsigned char address[8]);
         bool isEmpty();
+        bool equal(XBeeAddress address);
         unsigned char* getAddress();
         unsigned char getAddress(int index);
     private:
         bool _isEmpty;
-        unsigned char* _address;
+        unsigned char _address[8];
 };
 
 class Request
