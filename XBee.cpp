@@ -2,6 +2,10 @@
 #include "XBee.h"
 
 const unsigned char START_DELIMITER = 0x7E;
+const unsigned char ESCAPE_CHARACTER = 0x7D;
+const unsigned char XON_CHARACTER = 0x11;
+const unsigned char XOFF_CHARACTER = 0x13;
+
 const unsigned char LENGTH_MSB = 0x00;
 const unsigned char LENGTH_LSB = 0x11;
 const unsigned char FRAME_TYPE = 0x10;
@@ -122,8 +126,11 @@ int XBeeClient::available()
 void XBeeClient::write(unsigned char data)
 {
     if (_apiMode == 2) {
-        if (data == 0x7E || data == 0x7D || data == 0x11 || data == 0x13) {
-            Serial.write(0x7D);
+        if (data == START_DELIMITER ||
+            data == ESCAPE_CHARACTER ||
+            data == XON_CHARACTER ||
+            data == XOFF_CHARACTER) {
+            Serial.write(ESCAPE_CHARACTER);
             data = data ^ 0x20;
         }
     }
@@ -186,7 +193,7 @@ unsigned char XBeeClient::readPacket()
   unsigned char packet = Serial.read();
 
   if (_apiMode == 2) {
-      if (packet == 0x7D) {
+      if (packet == ESCAPE_CHARACTER) {
           packet = Serial.read();
           packet = packet ^ 0x20;
       }
