@@ -13,14 +13,17 @@ const unsigned char TRANSMIT_OPTION = 0x00;
 XBeeAddress::XBeeAddress()
 {
     _isEmpty = true;
+    for (int i = 0; i < 8; i++) {
+        _address[i] = 0x00;
+    }
 }
 
 XBeeAddress::XBeeAddress(unsigned char addr[8])
 {
+    _isEmpty = false;
     for (int i = 0; i < 8; i++) {
         _address[i] = addr[i];
     }
-    _isEmpty = false;
 }
 
 bool XBeeAddress::isEmpty()
@@ -89,6 +92,11 @@ void Response::setData(unsigned char* data)
     }
     _rfData = rfData;
     _checksum = data[_length[1] + 3];
+}
+
+XBeeAddress Response::getAddress()
+{
+    return _address64;
 }
 
 unsigned char* Response::getRfData()
