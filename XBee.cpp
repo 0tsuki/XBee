@@ -7,7 +7,6 @@ const unsigned char XON_CHARACTER = 0x11;
 const unsigned char XOFF_CHARACTER = 0x13;
 
 const unsigned char LENGTH_MSB = 0x00;
-const unsigned char LENGTH_LSB = 0x11;
 const unsigned char FRAME_TYPE = 0x10;
 const unsigned char FRAME_ID = 0x00;
 const unsigned char RESERVED[2] = {0xFF, 0xFE};
@@ -63,6 +62,22 @@ void Request::setRfData(int size, unsigned char* rfData)
 {
     _rfDataSize = size;
     _rfData = rfData;
+}
+
+unsigned char* Request::getRfData()
+{
+    return _rfData;
+}
+
+unsigned char Request::getRfData(int index)
+{
+    return _rfData[index];
+}
+
+
+int Request::getRfDataSize()
+{
+    return _rfDataSize;
 }
 
 Response::Response()
@@ -142,7 +157,7 @@ void XBeeClient::send(Request request, XBeeAddress address)
     Serial.write(START_DELIMITER);
 
     write(LENGTH_MSB);
-    write(LENGTH_LSB);
+    write(calcLengthLSB(request));
 
     write(FRAME_TYPE);
     write(FRAME_ID);
@@ -157,8 +172,8 @@ void XBeeClient::send(Request request, XBeeAddress address)
     write(BROADCAST_REDIUS);
     write(TRANSMIT_OPTION);
 
-    for (int i = 0; i < request._rfDataSize; i++) {
-      write(request._rfData[i]);
+    for (int i = 0; i < request.getRfDataSize(); i++) {
+      write(request.getRfData(i));
     }
 
     unsigned char checksum = calcChecksum(request, address);
@@ -202,6 +217,11 @@ unsigned char XBeeClient::readPacket()
   return packet;
 }
 
+unsigned char XBeeClient::calcLengthLSB(Request request)
+{
+    return 0x0E + request.getRfDataSize();
+}
+
 unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
 {
   unsigned char sum = FRAME_TYPE + FRAME_ID;
@@ -211,8 +231,8 @@ unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
   sum += RESERVED[0] + RESERVED[1];
   sum += BROADCAST_REDIUS;
   sum += TRANSMIT_OPTION;
-  for (int i = 0; i < request._rfDataSize; i++) {
-      sum += request._rfData[i];
+  for (int i = 0; i < request.getRfDataSize(); i++) {
+      sum += request.getRfData(i);
   }
   return 0xFF - sum;
 }

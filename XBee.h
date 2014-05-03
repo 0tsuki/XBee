@@ -23,7 +23,11 @@ class Request
     public:
         Request();
         void setRfData(int size, unsigned char* rfData);
+        int getRfDataSize();
+        unsigned char* getRfData();
+        unsigned char getRfData(int index);
         unsigned char calcChecksum();
+    private:
         unsigned char* _rfData;
         int _rfDataSize;
 };
@@ -60,6 +64,7 @@ class XBeeClient
         int _apiMode;
         void write(unsigned char data);
         unsigned char readPacket();
+        unsigned char calcLengthLSB(Request request);
         unsigned char calcChecksum(Request request, XBeeAddress address);
 };
 
