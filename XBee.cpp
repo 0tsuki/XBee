@@ -74,10 +74,54 @@ unsigned char Request::getRfData(int index)
     return _rfData[index];
 }
 
-
 int Request::getRfDataSize()
 {
     return _rfDataSize;
+}
+
+RemoteATCommandRequest::RemoteATCommandRequest()
+{
+  _frameType = 0x17;
+  _frameId = 0x01;
+  _lengthLSB = 0x10;
+  remoteCommandOptions = 0x02;
+}
+
+unsigned char RemoteATCommandRequest::getLengthLSB()
+{
+  return _lengthLSB;
+}
+
+unsigned char* RemoteATCommandRequest::getFrameData()
+{
+  unsigned char frameData[16];
+  frameData[0] = _frameType;
+  frameData[1] = _frameId;
+
+  for(int i = 0; i < 8; i++) {
+    frameData[i+2] = xbeeAddress.getAddress(i);
+  }
+
+  // Reserved
+  frameData[10] = 0xFF;
+  frameData[11] = 0xFE;
+
+  frameData[12] = remoteCommandOptions;
+  frameData[13] = atCommand[0];
+  frameData[14] = atCommand[1];
+  frameData[15] = commandParameter;
+
+  return frameData;
+}
+
+unsigned char RemoteATCommandRequest::getChecksum()
+{
+  unsigned char sum = 0x00;
+  unsigned char* frameData = getFrameData();
+  for(int i = 0; i < _lengthLSB; i++) {
+    sum = sum + frameData[i];
+  }
+  return 0xFF - sum;
 }
 
 Response::Response()
@@ -178,6 +222,19 @@ void XBeeClient::send(Request request, XBeeAddress address)
 
     unsigned char checksum = calcChecksum(request, address);
     write(checksum);
+}
+
+void XBeeClient::send(RemoteATCommandRequest request)
+{
+    Serial.write(START_DELIMITER);
+    write(0x00);
+    write(request.getLengthLSB());
+
+    unsigned char* frameData = request.getFrameData();
+    for(int i = 0; i < request.getLengthLSB(); i++) {
+      write(frameData[i]);
+    }
+    write(request.getChecksum());
 }
 
 Response XBeeClient::getResponse()
