@@ -213,6 +213,9 @@ unsigned char* Response::getRfData()
     return _rfData;
 }
 
+AtCommandResponse::AtCommandResponse() {
+}
+
 XBeeClient::XBeeClient()
 {
     _apiMode = 2;
@@ -313,6 +316,35 @@ Response XBeeClient::getResponse()
         response.setData(packets);
     }
 
+    return response;
+}
+
+AtCommandResponse XBeeClient::readResponse(AtCommandResponse response) {
+    unsigned char packet = Serial.read();
+    if (packet == START_DELIMITER) {
+        response.setMsb(readPacket());
+        response.setLsb(readPacket());
+        response.setFrameType(readPacket());
+        response.setFrameId(readPacket());
+
+        unsigned char command[2];
+        command[0] = readPacket();
+        command[1] = readPacket();
+        response.setCommand(command);
+        response.setCommandStatus(readPacket());
+
+        unsigned char commandDataLength = (unsigned char) (response.getLsb() - 5);
+        if (commandDataLength > 0) {
+            unsigned char commandData[commandDataLength];
+            for (int i = 0; i < commandDataLength; i++) {
+                commandData[i] = readPacket();
+            }
+            response.setCommandData(commandData);
+        } else {
+            response.setCommandData(NULL);
+        }
+        response.setChecksum(readPacket());
+    }
     return response;
 }
 

@@ -47,7 +47,7 @@ class AtCommandRequest : public BaseRequest
 {
 public:
     AtCommandRequest(unsigned char *command);
-    unsigned char* getCommand();
+    unsigned char *getCommand();
     unsigned char getCommandLength();
     unsigned char getLsb();
     unsigned char getFrameData(unsigned char position);
@@ -110,6 +110,92 @@ class Response
         unsigned char _checksum;
 };
 
+class BaseResponse
+{
+public:
+    unsigned char getMsb() const {
+        return msb;
+    }
+
+    unsigned char getLsb() const {
+        return lsb;
+    }
+
+    unsigned char getFrameType() const {
+        return frameType;
+    }
+
+    unsigned char getFrameId() const {
+        return frameId;
+    }
+
+    unsigned char getChecksum() const {
+        return checksum;
+    }
+
+    void setMsb(unsigned char msb) {
+        BaseResponse::msb = msb;
+    }
+
+    void setChecksum(unsigned char checksum) {
+        BaseResponse::checksum = checksum;
+    }
+
+    void setFrameId(unsigned char frameId) {
+        BaseResponse::frameId = frameId;
+    }
+
+    void setFrameType(unsigned char frameType) {
+        BaseResponse::frameType = frameType;
+    }
+
+    void setLsb(unsigned char lsb) {
+        BaseResponse::lsb = lsb;
+    }
+
+private:
+    unsigned char msb;
+    unsigned char lsb;
+    unsigned char frameType;
+    unsigned char frameId;
+    unsigned char checksum;
+};
+
+class AtCommandResponse : public BaseResponse
+{
+public:
+    AtCommandResponse();
+
+    unsigned char *getCommand() const {
+        return command;
+    }
+
+    unsigned char getCommandStatus() const {
+        return commandStatus;
+    }
+
+    unsigned char *getCommandData() const {
+        return commandData;
+    }
+
+    void setCommand(unsigned char *command) {
+        AtCommandResponse::command = command;
+    }
+
+    void setCommandData(unsigned char *commandData) {
+        AtCommandResponse::commandData = commandData;
+    }
+
+    void setCommandStatus(unsigned char commandStatus) {
+        AtCommandResponse::commandStatus = commandStatus;
+    }
+
+private:
+    unsigned char* command;
+    unsigned char commandStatus;
+    unsigned char* commandData;
+};
+
 class XBeeClient
 {
 public:
@@ -120,6 +206,8 @@ public:
     void send(Request request, XBeeAddress address);
     void send(RemoteATCommandRequest request);
     Response getResponse();
+    AtCommandResponse readResponse(AtCommandResponse response);
+
 private:
     int _apiMode;
     void write(unsigned char data);
