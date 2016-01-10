@@ -93,10 +93,10 @@ unsigned char AtCommandRequest::getFrameData(unsigned char position) {
         return getFrameType();
     } else if (position == 1) {
         return getFrameId();
-    } else if (position == 3 || position == 4) {
-        return _command[3 - position];
+    } else if (position == 2 || position == 3) {
+        return _command[position - 2];
     } else {
-        return _parameter[5 - position];
+        return _parameter[position - 4];
     }
 }
 
@@ -213,6 +213,17 @@ unsigned char* Response::getRfData()
     return _rfData;
 }
 
+unsigned char BaseResponse::getMsb() { return msb; }
+unsigned char BaseResponse::getLsb() { return lsb; }
+unsigned char BaseResponse::getFrameType() { return frameType; }
+unsigned char BaseResponse::getFrameId() { return frameId; }
+unsigned char BaseResponse::getChecksum() { return checksum; }
+void BaseResponse::setMsb(unsigned char msb) { BaseResponse::msb = msb; }
+void BaseResponse::setChecksum(unsigned char checksum) { BaseResponse::checksum = checksum; }
+void BaseResponse::setFrameId(unsigned char frameId) { BaseResponse::frameId = frameId; }
+void BaseResponse::setFrameType(unsigned char frameType) { BaseResponse::frameType = frameType; }
+void BaseResponse::setLsb(unsigned char lsb) { BaseResponse::lsb = lsb; }
+
 AtCommandResponse::AtCommandResponse() {
 }
 
@@ -319,33 +330,26 @@ Response XBeeClient::getResponse()
     return response;
 }
 
-AtCommandResponse XBeeClient::readResponse(AtCommandResponse response) {
+void XBeeClient::readResponse(AtCommandResponse* response) {
     unsigned char packet = Serial.read();
     if (packet == START_DELIMITER) {
-        response.setMsb(readPacket());
-        response.setLsb(readPacket());
-        response.setFrameType(readPacket());
-        response.setFrameId(readPacket());
+        response->setMsb(readPacket());
+        response->setLsb(readPacket());
+        response->setFrameType(readPacket());
+        response->setFrameId(readPacket());
 
-        unsigned char command[2];
-        command[0] = readPacket();
-        command[1] = readPacket();
-        response.setCommand(command);
-        response.setCommandStatus(readPacket());
+        response->command[0] = readPacket();
+        response->command[1] = readPacket();
+        response->commandStatus = readPacket();
 
-        unsigned char commandDataLength = (unsigned char) (response.getLsb() - 5);
+        unsigned char commandDataLength = (unsigned char) (response->getLsb() - 5);
         if (commandDataLength > 0) {
-            unsigned char commandData[commandDataLength];
             for (int i = 0; i < commandDataLength; i++) {
-                commandData[i] = readPacket();
+                response->commandData[i] = readPacket();
             }
-            response.setCommandData(commandData);
-        } else {
-            response.setCommandData(NULL);
         }
-        response.setChecksum(readPacket());
+        response->setChecksum(readPacket());
     }
-    return response;
 }
 
 unsigned char XBeeClient::readPacket()

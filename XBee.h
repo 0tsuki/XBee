@@ -39,22 +39,22 @@ public:
     virtual unsigned char getFrameData(unsigned char position) = 0;
 
 private:
-    virtual unsigned char _frameType = 0;
-    virtual unsigned char _frameId = 0;
+    unsigned char _frameType;
+    unsigned char _frameId;
 };
 
 class AtCommandRequest : public BaseRequest
 {
 public:
-    AtCommandRequest(unsigned char *command);
-    unsigned char *getCommand();
+    AtCommandRequest(unsigned char* command);
+    unsigned char* getCommand();
     unsigned char getCommandLength();
     unsigned char getLsb();
     unsigned char getFrameData(unsigned char position);
 
 private:
-    unsigned char *_command;
-    unsigned char *_parameter;
+    unsigned char* _command;
+    unsigned char* _parameter;
     unsigned char _commandLength;
 };
 
@@ -113,45 +113,16 @@ class Response
 class BaseResponse
 {
 public:
-    unsigned char getMsb() const {
-        return msb;
-    }
-
-    unsigned char getLsb() const {
-        return lsb;
-    }
-
-    unsigned char getFrameType() const {
-        return frameType;
-    }
-
-    unsigned char getFrameId() const {
-        return frameId;
-    }
-
-    unsigned char getChecksum() const {
-        return checksum;
-    }
-
-    void setMsb(unsigned char msb) {
-        BaseResponse::msb = msb;
-    }
-
-    void setChecksum(unsigned char checksum) {
-        BaseResponse::checksum = checksum;
-    }
-
-    void setFrameId(unsigned char frameId) {
-        BaseResponse::frameId = frameId;
-    }
-
-    void setFrameType(unsigned char frameType) {
-        BaseResponse::frameType = frameType;
-    }
-
-    void setLsb(unsigned char lsb) {
-        BaseResponse::lsb = lsb;
-    }
+    unsigned char getMsb();
+    unsigned char getLsb();
+    unsigned char getFrameType();
+    unsigned char getFrameId();
+    unsigned char getChecksum();
+    void setMsb(unsigned char msb);
+    void setChecksum(unsigned char checksum);
+    void setFrameId(unsigned char frameId);
+    void setFrameType(unsigned char frameType);
+    void setLsb(unsigned char lsb);
 
 private:
     unsigned char msb;
@@ -165,33 +136,7 @@ class AtCommandResponse : public BaseResponse
 {
 public:
     AtCommandResponse();
-
-    unsigned char *getCommand() const {
-        return command;
-    }
-
-    unsigned char getCommandStatus() const {
-        return commandStatus;
-    }
-
-    unsigned char *getCommandData() const {
-        return commandData;
-    }
-
-    void setCommand(unsigned char *command) {
-        AtCommandResponse::command = command;
-    }
-
-    void setCommandData(unsigned char *commandData) {
-        AtCommandResponse::commandData = commandData;
-    }
-
-    void setCommandStatus(unsigned char commandStatus) {
-        AtCommandResponse::commandStatus = commandStatus;
-    }
-
-private:
-    unsigned char* command;
+    unsigned char command[2];
     unsigned char commandStatus;
     unsigned char* commandData;
 };
@@ -206,7 +151,7 @@ public:
     void send(Request request, XBeeAddress address);
     void send(RemoteATCommandRequest request);
     Response getResponse();
-    AtCommandResponse readResponse(AtCommandResponse response);
+    void readResponse(AtCommandResponse* response);
 
 private:
     int _apiMode;
