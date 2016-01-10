@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "Arduino.h"
 #include "XBee.h"
 
@@ -51,6 +52,52 @@ unsigned char* XBeeAddress::getAddress()
 unsigned char XBeeAddress::getAddress(int index)
 {
     return _address[index];
+}
+
+unsigned char BaseRequest::getFrameType() { return _frameType; }
+void BaseRequest::setFrameType(unsigned char frameType) { _frameType = frameType; }
+unsigned char BaseRequest::getFrameId() { return _frameId; }
+void BaseRequest::setFrameId(unsigned char frameId) { _frameId = frameId; }
+
+unsigned char BaseRequest::checkSum()
+{
+    unsigned char sum = 0;
+    for (int i = 0; i < getLsb(); i++) {
+        sum += getFrameData(i);
+    }
+    return (unsigned char) (0xFF - sum);
+}
+
+AtCommandRequest::AtCommandRequest(unsigned char *command) {
+    setFrameType(AT_COMMAND_REQUEST);
+    setFrameId(0x01);
+    _command = command;
+    _parameter = NULL;
+    _commandLength = 0x02;
+}
+
+unsigned char* AtCommandRequest::getCommand() {
+    return _command;
+}
+
+unsigned char AtCommandRequest::getCommandLength() {
+    return _commandLength;
+}
+
+unsigned char AtCommandRequest::getLsb() {
+    return (unsigned char) (0x02 + getCommandLength());
+}
+
+unsigned char AtCommandRequest::getFrameData(unsigned char position) {
+    if (position == 0) {
+        return getFrameType();
+    } else if (position == 1) {
+        return getFrameId();
+    } else if (position == 3 || position == 4) {
+        return _command[3 - position];
+    } else {
+        return _parameter[5 - position];
+    }
 }
 
 Request::Request()
@@ -195,6 +242,16 @@ void XBeeClient::write(unsigned char data)
     Serial.write(data);
 }
 
+void XBeeClient::send(AtCommandRequest request) {
+    Serial.write(START_DELIMITER);
+    write(LENGTH_MSB);
+    write(request.getLsb());
+    for(unsigned char i = 0; i < request.getLsb(); i++) {
+        write(request.getFrameData(i));
+    }
+    write(request.checkSum());
+}
+
 void XBeeClient::send(Request request, XBeeAddress address)
 {
     Serial.write(START_DELIMITER);
@@ -292,4 +349,3 @@ unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
   }
   return 0xFF - sum;
 }
-
