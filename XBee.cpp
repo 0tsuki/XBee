@@ -7,7 +7,6 @@ const unsigned char XON_CHARACTER = 0x11;
 const unsigned char XOFF_CHARACTER = 0x13;
 
 const unsigned char LENGTH_MSB = 0x00;
-const unsigned char FRAME_TYPE = 0x10;
 const unsigned char FRAME_ID = 0x00;
 const unsigned char RESERVED[2] = {0xFF, 0xFE};
 const unsigned char BROADCAST_REDIUS = 0x00;
@@ -81,7 +80,7 @@ int Request::getRfDataSize()
 
 RemoteATCommandRequest::RemoteATCommandRequest()
 {
-  _frameType = 0x17;
+  _frameType = REMOTE_AT_COMMAND_REQUEST;
   _frameId = 0x01;
   _lengthLSB = 0x10;
   remoteCommandOptions = 0x02;
@@ -203,7 +202,7 @@ void XBeeClient::send(Request request, XBeeAddress address)
     write(LENGTH_MSB);
     write(calcLengthLSB(request));
 
-    write(FRAME_TYPE);
+    write(TRANSMIT_REQUEST);
     write(FRAME_ID);
 
     // 64-bit DestinationAddress
@@ -281,7 +280,7 @@ unsigned char XBeeClient::calcLengthLSB(Request request)
 
 unsigned char XBeeClient::calcChecksum(Request request, XBeeAddress address)
 {
-  unsigned char sum = FRAME_TYPE + FRAME_ID;
+  unsigned char sum = TRANSMIT_REQUEST + FRAME_ID;
   for (int i = 0; i < 8; i++) {
     sum += address.getAddress(i);
   }

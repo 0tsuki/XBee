@@ -4,6 +4,14 @@
 #include "Arduino.h"
 #include "HardwareSerial.h"
 
+/*
+ * API Frame constants
+ */
+#define AT_COMMAND_REQUEST 0x08
+#define AT_COMMAND_RESPONSE 0x88
+#define TRANSMIT_REQUEST 0x10
+#define REMOTE_AT_COMMAND_REQUEST 0x17
+
 class XBeeAddress
 {
     public:
