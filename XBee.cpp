@@ -127,47 +127,45 @@ int Request::getRfDataSize()
 
 RemoteATCommandRequest::RemoteATCommandRequest()
 {
-  _frameType = REMOTE_AT_COMMAND_REQUEST;
-  _frameId = 0x01;
-  _lengthLSB = 0x10;
-  remoteCommandOptions = 0x02;
+    setFrameType(REMOTE_AT_COMMAND_REQUEST);
+    setFrameId(0x01);
+    reserved[0] = 0xFF;
+    reserved[1] = 0xFE;
+    options = 0x02;
+    parameter = NULL;
+    commandLength = 0x02;
 }
 
-unsigned char RemoteATCommandRequest::getLengthLSB()
-{
-  return _lengthLSB;
+unsigned char RemoteATCommandRequest::getLsb() {
+    if (parameter == NULL) {
+        return 0x0F;
+    } else {
+        return 0xFF;  // TODO
+    }
 }
 
-unsigned char* RemoteATCommandRequest::getFrameData()
-{
-  unsigned char frameData[16];
-  frameData[0] = _frameType;
-  frameData[1] = _frameId;
-
-  for(int i = 0; i < 8; i++) {
-    frameData[i+2] = xbeeAddress.getAddress(i);
-  }
-
-  // Reserved
-  frameData[10] = 0xFF;
-  frameData[11] = 0xFE;
-
-  frameData[12] = remoteCommandOptions;
-  frameData[13] = atCommand[0];
-  frameData[14] = atCommand[1];
-  frameData[15] = commandParameter;
-
-  return frameData;
-}
-
-unsigned char RemoteATCommandRequest::getChecksum()
-{
-  unsigned char sum = 0x00;
-  unsigned char* frameData = getFrameData();
-  for(int i = 0; i < _lengthLSB; i++) {
-    sum = sum + frameData[i];
-  }
-  return 0xFF - sum;
+unsigned char RemoteATCommandRequest::getFrameData(unsigned char position) {
+    if (position == 0) {
+        return getFrameType();
+    } else if (position == 1) {
+        return getFrameId();
+    } else if (position >= 2 && position <= 9) {
+        return xbeeAddress.getAddress(position - 2);
+    } else if (position == 10 || position == 11) {
+        return reserved[position - 10];
+    } else if (position == 12) {
+        return options;
+    } else if (position == 13 || position == 14) {
+        return command[position - 13];
+    } else if (position == 15){
+        if (parameter == NULL) {
+           return NULL;
+        } else {
+            return parameter[0];
+        }
+    } else {
+        return 0xFF;
+    }
 }
 
 Response::Response()
@@ -227,6 +225,17 @@ void BaseResponse::setLsb(unsigned char lsb) { BaseResponse::lsb = lsb; }
 AtCommandResponse::AtCommandResponse() {
 }
 
+bool AtCommandResponse::isSuccess() {
+    return commandStatus == 0x00;
+}
+
+RemoteAtCommandResponse::RemoteAtCommandResponse() {
+}
+
+bool RemoteAtCommandResponse::isSuccess() {
+    return commandStatus == 0x00;
+}
+
 XBeeClient::XBeeClient()
 {
     _apiMode = 2;
@@ -266,6 +275,17 @@ void XBeeClient::send(AtCommandRequest request) {
     write(request.checkSum());
 }
 
+void XBeeClient::send(RemoteATCommandRequest request)
+{
+    Serial.write(START_DELIMITER);
+    write(LENGTH_MSB);
+    write(request.getLsb());
+    for(unsigned char i = 0; i < request.getLsb(); i++) {
+        write(request.getFrameData(i));
+    }
+    write(request.checkSum());
+}
+
 void XBeeClient::send(Request request, XBeeAddress address)
 {
     Serial.write(START_DELIMITER);
@@ -292,19 +312,6 @@ void XBeeClient::send(Request request, XBeeAddress address)
 
     unsigned char checksum = calcChecksum(request, address);
     write(checksum);
-}
-
-void XBeeClient::send(RemoteATCommandRequest request)
-{
-    Serial.write(START_DELIMITER);
-    write(0x00);
-    write(request.getLengthLSB());
-
-    unsigned char* frameData = request.getFrameData();
-    for(int i = 0; i < request.getLengthLSB(); i++) {
-      write(frameData[i]);
-    }
-    write(request.getChecksum());
 }
 
 Response XBeeClient::getResponse()
@@ -343,6 +350,35 @@ void XBeeClient::readResponse(AtCommandResponse* response) {
         response->commandStatus = readPacket();
 
         unsigned char commandDataLength = (unsigned char) (response->getLsb() - 5);
+        if (commandDataLength > 0) {
+            for (int i = 0; i < commandDataLength; i++) {
+                response->commandData[i] = readPacket();
+            }
+        }
+        response->setChecksum(readPacket());
+    }
+}
+
+void XBeeClient::readResponse(RemoteAtCommandResponse* response) {
+    unsigned char packet = Serial.read();
+    if (packet == START_DELIMITER) {
+        response->setMsb(readPacket());
+        response->setLsb(readPacket());
+        response->setFrameType(readPacket());
+        response->setFrameId(readPacket());
+
+        unsigned char address[8];
+        for (int i = 0; i < 8; i++) {
+           address[i]  = readPacket();
+        }
+        response->xbeeAddress = XBeeAddress(address);
+        response->reserved[0] = readPacket();
+        response->reserved[1] = readPacket();
+        response->command[0] = readPacket();
+        response->command[1] = readPacket();
+        response->commandStatus = readPacket();
+
+        unsigned char commandDataLength = (unsigned char) (response->getLsb() - 15);
         if (commandDataLength > 0) {
             for (int i = 0; i < commandDataLength; i++) {
                 response->commandData[i] = readPacket();

@@ -71,23 +71,19 @@ class Request
         int _rfDataSize;
 };
 
-class RemoteATCommandRequest
+class RemoteATCommandRequest : public BaseRequest
 {
   public:
     RemoteATCommandRequest();
     XBeeAddress xbeeAddress;
-    unsigned char atCommand[2];
-    unsigned char commandParameter;
-    unsigned char remoteCommandOptions;
-    unsigned char getLengthLSB();
-    unsigned char getFrameType();
-    unsigned char getFrameId();
-    unsigned char* getFrameData();
-    unsigned char getChecksum();
-  private:
-    unsigned char _lengthLSB;
-    unsigned char _frameType;
-    unsigned char _frameId;
+    unsigned char reserved[2];
+    unsigned char options;
+    unsigned char command[2];
+    unsigned char* parameter;
+    unsigned char commandLength;
+
+    unsigned char getLsb();
+    unsigned char getFrameData(unsigned char position);
 };
 
 class Response
@@ -139,6 +135,19 @@ public:
     unsigned char command[2];
     unsigned char commandStatus;
     unsigned char* commandData;
+    bool isSuccess();
+};
+
+class RemoteAtCommandResponse : public BaseResponse
+{
+public:
+    RemoteAtCommandResponse();
+    XBeeAddress xbeeAddress;
+    unsigned char reserved[2];
+    unsigned char command[2];
+    unsigned char commandStatus;
+    unsigned char* commandData;
+    bool isSuccess();
 };
 
 class XBeeClient
@@ -148,10 +157,11 @@ public:
     void setSerial(int speed);
     int available();
     void send(AtCommandRequest request);
-    void send(Request request, XBeeAddress address);
     void send(RemoteATCommandRequest request);
+    void send(Request request, XBeeAddress address);
     Response getResponse();
     void readResponse(AtCommandResponse* response);
+    void readResponse(RemoteAtCommandResponse* response);
 
 private:
     int _apiMode;
