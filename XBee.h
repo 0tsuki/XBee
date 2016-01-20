@@ -134,7 +134,7 @@ public:
     AtCommandResponse();
     unsigned char command[2];
     unsigned char commandStatus;
-    unsigned char* commandData;
+    unsigned char commandData[10];
     bool isSuccess();
 };
 
@@ -146,7 +146,7 @@ public:
     unsigned char reserved[2];
     unsigned char command[2];
     unsigned char commandStatus;
-    unsigned char* commandData;
+    unsigned char commandData[10];
     bool isSuccess();
 };
 
