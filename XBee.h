@@ -4,6 +4,14 @@
 #include "Arduino.h"
 #include "HardwareSerial.h"
 
+/*
+ * API Frame constants
+ */
+#define AT_COMMAND_REQUEST 0x08
+#define AT_COMMAND_RESPONSE 0x88
+#define TRANSMIT_REQUEST 0x10
+#define REMOTE_AT_COMMAND_REQUEST 0x17
+
 class XBeeAddress
 {
     public:
@@ -16,6 +24,38 @@ class XBeeAddress
     private:
         bool _isEmpty;
         unsigned char _address[8];
+};
+
+class BaseRequest
+{
+public:
+    unsigned char getFrameType();
+    void setFrameType(unsigned char frameType);
+    unsigned char getFrameId();
+    void setFrameId(unsigned char frameId);
+    unsigned char checkSum();
+
+    virtual unsigned char getLsb() = 0;
+    virtual unsigned char getFrameData(unsigned char position) = 0;
+
+private:
+    unsigned char _frameType;
+    unsigned char _frameId;
+};
+
+class AtCommandRequest : public BaseRequest
+{
+public:
+    AtCommandRequest(unsigned char* command);
+    unsigned char* getCommand();
+    unsigned char getCommandLength();
+    unsigned char getLsb();
+    unsigned char getFrameData(unsigned char position);
+
+private:
+    unsigned char* _command;
+    unsigned char* _parameter;
+    unsigned char _commandLength;
 };
 
 class Request
@@ -31,23 +71,19 @@ class Request
         int _rfDataSize;
 };
 
-class RemoteATCommandRequest
+class RemoteATCommandRequest : public BaseRequest
 {
   public:
     RemoteATCommandRequest();
     XBeeAddress xbeeAddress;
-    unsigned char atCommand[2];
-    unsigned char commandParameter;
-    unsigned char remoteCommandOptions;
-    unsigned char getLengthLSB();
-    unsigned char getFrameType();
-    unsigned char getFrameId();
-    unsigned char* getFrameData();
-    unsigned char getChecksum();
-  private:
-    unsigned char _lengthLSB;
-    unsigned char _frameType;
-    unsigned char _frameId;
+    unsigned char reserved[2];
+    unsigned char options;
+    unsigned char command[2];
+    unsigned char* parameter;
+    unsigned char commandLength;
+
+    unsigned char getLsb();
+    unsigned char getFrameData(unsigned char position);
 };
 
 class Response
@@ -70,21 +106,69 @@ class Response
         unsigned char _checksum;
 };
 
+class BaseResponse
+{
+public:
+    unsigned char getMsb();
+    unsigned char getLsb();
+    unsigned char getFrameType();
+    unsigned char getFrameId();
+    unsigned char getChecksum();
+    void setMsb(unsigned char msb);
+    void setChecksum(unsigned char checksum);
+    void setFrameId(unsigned char frameId);
+    void setFrameType(unsigned char frameType);
+    void setLsb(unsigned char lsb);
+
+private:
+    unsigned char msb;
+    unsigned char lsb;
+    unsigned char frameType;
+    unsigned char frameId;
+    unsigned char checksum;
+};
+
+class AtCommandResponse : public BaseResponse
+{
+public:
+    AtCommandResponse();
+    unsigned char command[2];
+    unsigned char commandStatus;
+    unsigned char commandData[10];
+    bool isSuccess();
+};
+
+class RemoteAtCommandResponse : public BaseResponse
+{
+public:
+    RemoteAtCommandResponse();
+    XBeeAddress xbeeAddress;
+    unsigned char reserved[2];
+    unsigned char command[2];
+    unsigned char commandStatus;
+    unsigned char commandData[10];
+    bool isSuccess();
+};
+
 class XBeeClient
 {
-    public:
-        XBeeClient();
-        void setSerial(int speed);
-        int available();
-        void send(Request request, XBeeAddress address);
-        void send(RemoteATCommandRequest request);
-        Response getResponse();
-    private:
-        int _apiMode;
-        void write(unsigned char data);
-        unsigned char readPacket();
-        unsigned char calcLengthLSB(Request request);
-        unsigned char calcChecksum(Request request, XBeeAddress address);
+public:
+    XBeeClient();
+    void setSerial(int speed);
+    int available();
+    void send(AtCommandRequest request);
+    void send(RemoteATCommandRequest request);
+    void send(Request request, XBeeAddress address);
+    Response getResponse();
+    void readResponse(AtCommandResponse* response);
+    void readResponse(RemoteAtCommandResponse* response);
+
+private:
+    int _apiMode;
+    void write(unsigned char data);
+    unsigned char readPacket();
+    unsigned char calcLengthLSB(Request request);
+    unsigned char calcChecksum(Request request, XBeeAddress address);
 };
 
 #endif
