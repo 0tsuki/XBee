@@ -79,7 +79,7 @@ class RemoteATCommandRequest : public BaseRequest
     unsigned char reserved[2];
     unsigned char options;
     unsigned char command[2];
-    unsigned char* parameter;
+    unsigned char parameter;
     unsigned char commandLength;
 
     unsigned char getLsb();

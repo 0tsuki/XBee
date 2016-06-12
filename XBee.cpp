@@ -161,7 +161,7 @@ unsigned char RemoteATCommandRequest::getFrameData(unsigned char position) {
         if (parameter == NULL) {
            return NULL;
         } else {
-            return parameter[0];
+           return parameter;
         }
     } else {
         return 0xFF;
