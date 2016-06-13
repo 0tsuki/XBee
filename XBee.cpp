@@ -140,7 +140,7 @@ unsigned char RemoteATCommandRequest::getLsb() {
     if (parameter == NULL) {
         return 0x0F;
     } else {
-        return 0xFF;  // TODO
+        return 0x10;
     }
 }
 
